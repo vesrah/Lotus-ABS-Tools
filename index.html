@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lotus ABS Diagnostic Trouble Code Decoder</title>
+</head>
+<body>
+<h1>Lotus ABS Diagnostic Trouble Code Decoder</h1>
+<form id="dtc-form">
+    <label for="dtc-data">Paste Diagnostic Trouble Code Data:</label><br>
+    <textarea id="dtc-data" rows="5" cols="50"></textarea><br><br>
+    <button type="submit">Analyze</button>
+    <button id="test-button">Example Data</button>
+</form>
+
+<table id="dtc-results" style="display: none;">  <thead>
+<tr>
+    <th>#</th>
+    <th>DTC Code</th>
+<!--    <th>Type</th>-->
+<!--    <th>Status</th>-->
+    <th>Explanation</th>
+</tr>
+</thead>
+    <tbody>
+    </tbody>
+</table>
+<script>
+    function readDiagnosticTroubleCodeByStatusCB(payloadBytes) {
+        const dtcCount = payloadBytes[1];
+
+        const dtcObject = {
+            sid: payloadBytes[0] - 0x40,
+            dtc_count: dtcCount,
+            dtcs: [],
+        };
+
+        for (let dtcIdx = 0; dtcIdx < dtcCount; dtcIdx++) {
+            const dtcTypeCode = ((payloadBytes[2 + (3 * dtcIdx)] >> 6) & 0x3)
+            let dtcTypeChar;
+            switch (dtcTypeCode) {
+                case 0x0:
+                    dtcTypeChar = 'P';
+                    break;
+                case 0x1:
+                    dtcTypeChar = 'C';
+                    break;
+                case 0x2:
+                    dtcTypeChar = 'B';
+                    break;
+                case 0x3:
+                    dtcTypeChar = 'U';
+                    break;
+                default:
+                    dtcTypeChar = '?';
+            }
+
+            let dtcCode = (payloadBytes[2 + (3 * dtcIdx)] << 8) | payloadBytes[2 + (3 * dtcIdx) + 1];
+            dtcCode &= 0x3FFF;
+            const dtcStatus = payloadBytes[2 + (3 * dtcIdx) + 2];
+            const dtcStr = `${dtcTypeChar}${dtcCode.toString(16).padStart(4, '0')}`;
+
+            let dtcExplanation;
+            switch (dtcCode) {
+                case 0x0035:
+                    dtcExplanation = "Front left wheel speed sensor: Short circuit or circuit open";
+                    break;
+                case 0x0040:
+                    dtcExplanation = "Front right wheel speed sensor: Short circuit or circuit open";
+                    break;
+                case 0x0045:
+                    dtcExplanation = "Rear left wheel speed sensor: Short circuit or circuit open";
+                    break;
+                case 0x0050:
+                    dtcExplanation = "Rear right wheel speed sensor: Short circuit or circuit open";
+                    break;
+                case 0x0060:
+                    dtcExplanation = "Front left outlet solenoid valve circuit malfunction";
+                    break;
+                case 0x0065:
+                    dtcExplanation = "Front left inlet solenoid valve circuit malfunction";
+                    break;
+                case 0x0070:
+                    dtcExplanation = "Front right outlet solenoid valve circuit malfunction";
+                    break;
+                case 0x0075:
+                    dtcExplanation = "Front right inlet solenoid valve circuit malfunction";
+                    break;
+                case 0x0080:
+                    dtcExplanation = "Rear left outlet solenoid valve circuit malfunction";
+                    break;
+                case 0x0085:
+                    dtcExplanation = "Rear left inlet solenoid valve circuit malfunction";
+                    break;
+                case 0x0090:
+                    dtcExplanation = "Rear right outlet solenoid valve circuit malfunction";
+                    break;
+                case 0x0095:
+                    dtcExplanation = "Rear right inlet solenoid valve circuit malfunction";
+                    break;
+                case 0x0110:
+                    dtcExplanation = "Return pump: circuit open or shorted, locked or shorted";
+                    break;
+                case 0x0121:
+                    dtcExplanation = "Valve relay circuit malfunction";
+                    break;
+                case 0x0161:
+                    dtcExplanation = "Brake light switch fault";
+                    break;
+                case 0x0232:
+                    dtcExplanation = "Brake system telltale voltage: high, low, or open circuit";
+                    break;
+                case 0x0245:
+                    dtcExplanation = "Wheel speed: sensor erratic signal or error";
+                    break;
+                case 0x0252:
+                    dtcExplanation = "Speed calculation error between 8 bits";
+                    break;
+                case 0x0550:
+                    dtcExplanation = "Replace electronic control unit";
+                    break;
+                case 0x0556:
+                    dtcExplanation = "Watchdog error";
+                    break;
+                case 0x0560:
+                    dtcExplanation = "Replace electronic control unit";
+                    break;
+                case 0x0561:
+                    dtcExplanation = "8 bit RAM / ROM error";
+                    break;
+                case 0x0563:
+                    dtcExplanation = "16 bit ROM error";
+                    break;
+                case 0x0564:
+                    dtcExplanation = "16 bit RAM error";
+                    break;
+                case 0x0800:
+                    dtcExplanation = "Switched battery voltage: high (valve relay) or low (valve relay)";
+                    break;
+                default:
+                    dtcExplanation = "Unknown DTC";
+            }
+
+            dtcObject.dtcs.push({
+                dtc_code: dtcCode,
+                dtc_type_char: dtcTypeChar,
+                dtc_str: dtcStr,
+                dtc_status: dtcStatus,
+                dtc_explanation: dtcExplanation,
+            });
+        }
+
+        return dtcObject;
+    }
+</script>
+<script>
+    const form = document.getElementById('dtc-form');
+    const dtcDataInput = document.getElementById('dtc-data');
+    const dtcResultsTable = document.getElementById('dtc-results');
+    const tbody = dtcResultsTable.getElementsByTagName('tbody')[0];
+    const testButton = document.getElementById('test-button');
+
+    testButton.addEventListener('click', () => {
+        dtcDataInput.value = "58 09 40 35 A4 40 40 A4 40 45 A4 40 50 A4 40 35 A5 40 40 A5 40 40 A6 41 61 20 42 32 61";
+    });
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent default form submission
+
+        const dtcDataString = dtcDataInput.value;
+        if (!dtcDataString) {
+            alert('Please paste Diagnostic Trouble Code data.');
+            return;
+        }
+
+        const dtcData = dtcDataString.split(' ').map(str => parseInt(str, 16)); // Convert to hex array
+
+        const dtcObject = readDiagnosticTroubleCodeByStatusCB(dtcData);
+
+        tbody.innerHTML = '';
+
+        dtcObject.dtcs.forEach((dtc, index) => {
+            const row = document.createElement('tr');
+            const cell1 = document.createElement('td');
+            cell1.textContent = index + 1;
+            const cell2 = document.createElement('td');
+            cell2.textContent = dtc.dtc_str;
+            const cell3 = document.createElement('td');
+            cell3.textContent = dtc.dtc_type_char;
+            const cell4 = document.createElement('td');
+            cell4.textContent = dtc.dtc_status.toString(16).padStart(2, '0');
+            const cell5 = document.createElement('td');
+            cell5.textContent = dtc.dtc_explanation;
+
+            row.appendChild(cell1);
+            row.appendChild(cell2);
+            // row.appendChild(cell3);
+            // row.appendChild(cell4);
+            row.appendChild(cell5);
+            tbody.appendChild(row);
+        });
+
+        dtcResultsTable.style.display = '';
+    });
+</script>
+</body>
+</html>
