@@ -166,30 +166,35 @@
     });
 
     form.addEventListener('submit', function(event) {
-        event.preventDefault(); // Prevent default form submission
+        event.preventDefault();
 
-        const dtcDataString = dtcDataInput.value;
+        let dtcDataString = dtcDataInput.value.trim();
         if (!dtcDataString) {
             alert('Please paste Diagnostic Trouble Code data.');
             return;
         }
 
-        const dtcData = dtcDataString.split(' ').map(str => parseInt(str, 16)); // Convert to hex array
+        if (dtcDataString.replace(/\s+/g, '').length % 2 === 0) {
+            dtcDataString = dtcDataString.replace(/\s+/g, '').match(/.{2}/g).join(' ');
+        } else {
+            alert('Invalid Diagnostic Trouble Code data, are you sure you\'ve pasted correctly?');
+            return;
+        }
 
+        const dtcData = dtcDataString.split(' ').map(str => parseInt(str, 16));
         const dtcObject = readDiagnosticTroubleCodeByStatusCB(dtcData);
-
         tbody.innerHTML = '';
 
-        dtcObject.dtcs.forEach((dtc, index) => {
+        dtcObject.dtcs.filter(dtc => dtc.dtc_type_char === 'C').forEach((dtc, index) => {
             const row = document.createElement('tr');
             const cell1 = document.createElement('td');
             cell1.textContent = index + 1;
             const cell2 = document.createElement('td');
             cell2.textContent = dtc.dtc_str;
-            const cell3 = document.createElement('td');
-            cell3.textContent = dtc.dtc_type_char;
-            const cell4 = document.createElement('td');
-            cell4.textContent = dtc.dtc_status.toString(16).padStart(2, '0');
+            // const cell3 = document.createElement('td');
+            // cell3.textContent = dtc.dtc_type_char;
+            // const cell4 = document.createElement('td');
+            // cell4.textContent = dtc.dtc_status.toString(16).padStart(2, '0');
             const cell5 = document.createElement('td');
             cell5.textContent = dtc.dtc_explanation;
 
